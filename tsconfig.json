@@ -1,0 +1,10 @@
+{
+	"extends": "./tsconfig.base.json",
+	"exclude": [
+		".tsimp",
+		"lib",
+		"node_modules",
+		"**/*.test.ts",
+		"**/tests/*"
+	]
+}

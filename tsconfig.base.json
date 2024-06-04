@@ -1,0 +1,42 @@
+{
+	"compilerOptions": {
+		"target": "es6",
+		"lib": [ "dom", "es2021" ],
+		"outDir": "lib",
+		"allowJs": true,
+		"strict": true,
+		"forceConsistentCasingInFileNames": true,
+		// "noEmit": true,
+		"esModuleInterop": true,
+		"module": "node16",
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"incremental": true,
+		"allowSyntheticDefaultImports": true,
+		"noFallthroughCasesInSwitch": true,
+		"sourceMap": true,
+		"alwaysStrict": true,
+		"declaration": false,
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"inlineSourceMap": false,
+		"noEmitOnError": true,
+		"removeComments": false,
+		"newLine": "LF",
+		"types": [ "node" ],
+		"noUnusedLocals": true,
+		"noImplicitAny": true,
+		"noImplicitReturns": true,
+		"strictNullChecks": true,
+		"strictPropertyInitialization": true,
+		"strictFunctionTypes": true,
+		"paths": {
+			"@/*": [
+				"./src/*"
+			]
+		}
+	},
+	"include": [
+		"src/**/*.ts"
+	]
+}
