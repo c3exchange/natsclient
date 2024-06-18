@@ -1,3 +1,8 @@
-# natsclient
+# natsjetstreamclient
 
-Node.js client for NATS &amp; JetStream
+A Node.js client for NATS &amp; JetStream
+
+## Installation
+```bash
+npm install @c3exchange/natsjetstreamclient
+```

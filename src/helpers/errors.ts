@@ -17,3 +17,11 @@ export const isStreamConsumerNotFoundError = (err: any): boolean => {
 export const isStreamConsumerAlreadyExistsError = (err: any): boolean => {
 	return err.api_error?.err_code === 10013 || err.api_error?.err_code === 10105;
 };
+
+export const isLastMsgIdMismatchError = (err: any): boolean => {
+	return err.api_error?.err_code === 10070;
+};
+
+export const isLastSequenceMismatchError = (err: any): boolean => {
+	return err.api_error?.err_code === 10071;
+};

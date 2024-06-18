@@ -1,21 +1,23 @@
-import { NatsClientConsumer, NatsStreamMessageAck, NatsStreamMessageCallback } from '../types';
-import { Consumer, millis } from 'nats';
+import * as nats from 'nats';
+import { Consumer, StreamMessageAck, StreamMessageCallback } from '../types';
 import { isStreamConsumerNotFoundError } from '../helpers/errors';
-import { NatsClientSharedInternals } from './internals';
-
+import { SharedInternals } from './internals';
+import 'util'
 // -----------------------------------------------------------------------------
 
-export class NatsClientConsumerImpl implements NatsClientConsumer {
-	constructor(private name: string, private consumer: Consumer, private internals: NatsClientSharedInternals) {
-		// this.name = 'consumer' + this.internals.getNextId();
+/**
+ * @inheritdoc
+ */
+export class ConsumerImpl implements Consumer {
+	constructor(private name: string, private consumer: nats.Consumer, private internals: SharedInternals) {
 	}
 
 	/**
 	 * @inheritdoc
 	 */
-	public async delete(): Promise<void> {
+	public async destroy(): Promise<void> {
 		if (this.internals.isClosed()) {
-			throw new Error('NatsClient: Connection is closed');
+			throw new Error('NatsJetstreamClient: connection is closed');
 		}
 
 		// Delete consumer
@@ -33,15 +35,26 @@ export class NatsClientConsumerImpl implements NatsClientConsumer {
 	/**
 	 * @inheritdoc
 	 */
-	public async subscribe(cb: NatsStreamMessageCallback): Promise<void> {
+	public async subscribe(cb: StreamMessageCallback): Promise<void> {
 		if (this.internals.isClosed()) {
-			throw new Error('NatsClient: Connection is closed');
+			throw new Error('NatsJetstreamClient: connection is closed');
 		}
 
 		// Check if a subscription already exists
 		if (this.internals.hasConsumerSubscription(this.name)) {
-			throw new Error('NatsClient: Already subscribed');
+			throw new Error('NatsJetstreamClient: Already subscribed');
 		}
+
+		// Promisify callback
+		const wrappedCb = (msg: StreamMessageAck): Promise<boolean | undefined> => {
+			try {
+				const result = cb(msg);
+				return Promise.resolve(result);
+			}
+			catch (err: any) {
+				return Promise.reject(err);
+			}
+		};
 
 		// Start consuming messages
 		const consumerMessages = await this.consumer.consume();
@@ -53,11 +66,11 @@ export class NatsClientConsumerImpl implements NatsClientConsumer {
 					break;
 				}
 
-				const msg: NatsStreamMessageAck = {
+				const msg: StreamMessageAck = {
 					subject: m.subject,
 					message: m.data,
 					sequence: m.seq,
-					timestamp: new Date(millis(m.info.timestampNanos)),
+					timestamp: new Date(nats.millis(m.info.timestampNanos)),
 					ack: () => {
 						if (!this.internals.isClosed()) {
 							m.ack();
@@ -78,7 +91,7 @@ export class NatsClientConsumerImpl implements NatsClientConsumer {
 
 				// Call callback
 				try {
-					const ret = await cb(msg);
+					const ret = await wrappedCb(msg);
 					if (typeof ret === 'boolean' && (!this.internals.isClosed())) {
 						if (ret) {
 							m.ack();

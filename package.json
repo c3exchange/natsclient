@@ -1,5 +1,5 @@
 {
-  "name": "natsclient",
+  "name": "@c3exchange/natsjetstreamclient",
   "version": "0.1.0",
   "description": "A NATS.io/JetStream client library",
   "main": "lib/index.js",
@@ -44,7 +44,6 @@
     "package.json",
     "*.md",
     "LICENSE",
-    ".gitattributes",
     "lib/**/*",
     "src/**/*"
   ],

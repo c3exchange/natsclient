@@ -1,7 +1,14 @@
 import { ExecutionContext } from 'ava';
 import { config as dotEnvConfig } from 'dotenv';
 import path from 'path';
-import { NatsClient } from '..';
+import { Client, ClientCredentials } from '..';
+
+// -----------------------------------------------------------------------------
+
+interface Config {
+	servers: string | string[];
+	credentials: ClientCredentials;
+};
 
 // -----------------------------------------------------------------------------
 
@@ -15,12 +22,39 @@ export const getTimestamp = (): string => {
 	return `${hours}:${minutes}:${seconds}.${milliseconds}`;
 };
 
-export const loadConfig = (): void => {
-	dotEnvConfig({
-		path: path.resolve(process.cwd(), 'tests.env'),
-		override: true
-	});
+export const loadConfig = (t: ExecutionContext): void => {
+	try {
+		dotEnvConfig({
+			path: path.resolve(process.cwd(), 'tests.env'),
+			override: true
+		});
+	}
+	catch (err: any) {
+		t.fail(err.toString());
+	}
+	if (typeof process.env['NATS_TEST_HOST'] !== 'string' || process.env['NATS_TEST_HOST'].length == 0) {
+		t.fail('NATS_TEST_HOST not found. Cannot continue this test.');
+	}
+	if (typeof process.env['NATS_TEST_JWT'] !== 'string' || process.env['NATS_TEST_JWT'].length == 0) {
+		t.fail('NATS_TEST_JWT not found. Cannot continue this test.');
+	}
+	if (typeof process.env['NATS_TEST_NKEY_SEED'] !== 'string' || process.env['NATS_TEST_NKEY_SEED'].length == 0) {
+		t.fail('NATS_TEST_JWT not found. Cannot continue this test.');
+	}
 };
+
+export const getConfig = (): Config => {
+	return {
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		servers: process.env['NATS_TEST_HOST']!.split(',').map((elem) => elem.trim()),
+		credentials: {
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			jwt: process.env['NATS_TEST_JWT']!,
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			nkeySeed: process.env['NATS_TEST_NKEY_SEED']!
+		}
+	};
+}
 
 export const errMsg = (err: any): string => {
 	if (err.message) {
@@ -59,7 +93,7 @@ export const verifyTestMsg = (s: string): number => {
 	return parseInt(s.substring(7), 10);
 };
 
-export const monitorClientAndLog = (t: ExecutionContext, client: NatsClient) => {
+export const monitorClientAndLog = (t: ExecutionContext, client: Client) => {
 	client.on('status', (status: Record<string, any>) => {
 		t.log('[' + client.name + '] status: ' + status.connection);
 	});

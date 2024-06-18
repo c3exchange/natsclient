@@ -1,42 +1,27 @@
 import test, { ExecutionContext } from 'ava';
-import { NatsClient } from '../index';
-import { NatsMessage } from '../types';
-import { loadConfig, sleep, encodeMsg, decodeMsg, generateTestMsg, verifyTestMsg, monitorClientAndLog, getTimestamp } from './helpers';
+import { Client, Message } from '..';
+import { loadConfig, sleep, encodeMsg, decodeMsg, generateTestMsg, verifyTestMsg, monitorClientAndLog, getTimestamp, getConfig } from './helpers';
 
 // -----------------------------------------------------------------------------
 
-test.before('Loading settings...', () => {
-	loadConfig();
+test.before('Loading settings...', (t: ExecutionContext) => {
+	loadConfig(t);
 });
 
-test('NatsClient basic test', async (t: ExecutionContext) => {
-	if (typeof process.env['NATS_TEST_HOST'] !== 'string' || process.env['NATS_TEST_HOST'].length == 0) {
-		t.fail('NATS_TEST_HOST not found. Cannot continue this test.');
-	}
-	if (typeof process.env['NATS_TEST_JWT'] !== 'string' || process.env['NATS_TEST_JWT'].length == 0) {
-		t.fail('NATS_TEST_JWT not found. Cannot continue this test.');
-	}
-	if (typeof process.env['NATS_TEST_NKEY_SEED'] !== 'string' || process.env['NATS_TEST_NKEY_SEED'].length == 0) {
-		t.fail('NATS_TEST_JWT not found. Cannot continue this test.');
-	}
-
-	let producer!: NatsClient;
-	let consumer!: NatsClient;
+test('NATS test', async (t: ExecutionContext) => {
+	let producer!: Client;
+	let consumer!: Client;
 	try {
 		// Connect to the test server
 		t.log(getTimestamp() + ' | Connecting...');
-		producer = await NatsClient.create({
-			servers: process.env['NATS_TEST_HOST'],
-			jwt: process.env['NATS_TEST_JWT'],
-			nkeySeed: process.env['NATS_TEST_NKEY_SEED'],
-			name: 'NatsClient-basic-test-producer'
+		producer = await Client.create({
+			...getConfig(),
+			name: 'NatsJetstreamClient-basic-test-producer'
 		});
 		monitorClientAndLog(t, producer);
-		consumer = await NatsClient.create({
-			servers: process.env['NATS_TEST_HOST'],
-			jwt: process.env['NATS_TEST_JWT'],
-			nkeySeed: process.env['NATS_TEST_NKEY_SEED'],
-			name: 'NatsClient-basic-test-consumer'
+		consumer = await Client.create({
+			...getConfig(),
+			name: 'NatsJetstreamClient-basic-test-consumer'
 		});
 		monitorClientAndLog(t, consumer);
 
@@ -50,7 +35,7 @@ test('NatsClient basic test', async (t: ExecutionContext) => {
 
 		// Set up subscriptions
 		t.log(getTimestamp() + ' | Subscribing consumers...');
-		consumer.subscribe('TEST_CHANNEL.*', async (msg: NatsMessage) => {
+		consumer.subscribe('TEST_CHANNEL.*', async (msg: Message) => {
 			const s = decodeMsg(msg.message);
 			t.log(getTimestamp() + ' | [TEST_CHANNEL.*] Received: ' + s);
 
@@ -72,7 +57,7 @@ test('NatsClient basic test', async (t: ExecutionContext) => {
 			receivedAll += 1;
 		});
 
-		consumer.subscribe('TEST_CHANNEL.ODD', async (msg: NatsMessage) => {
+		consumer.subscribe('TEST_CHANNEL.ODD', async (msg: Message) => {
 			const s = decodeMsg(msg.message);
 			t.log(getTimestamp() + ' | [TEST_CHANNEL.ODD] Received: ' + s);
 
@@ -94,7 +79,7 @@ test('NatsClient basic test', async (t: ExecutionContext) => {
 			receivedOdd += 1;
 		});
 
-		consumer.subscribe('TEST_CHANNEL.EVEN', async (msg: NatsMessage) => {
+		consumer.subscribe('TEST_CHANNEL.EVEN', async (msg: Message) => {
 			const s = decodeMsg(msg.message);
 			t.log(getTimestamp() + ' | [TEST_CHANNEL.EVEN] Received: ' + s);
 
@@ -141,7 +126,7 @@ test('NatsClient basic test', async (t: ExecutionContext) => {
 			t.log(getTimestamp() + ' | Done!');
 		}
 		else {
-			t.fail('Not all messages were received in a timely fashion');
+			t.fail(getTimestamp() + ' | Not all messages were received in a timely fashion');
 		}
 	}
 	finally {

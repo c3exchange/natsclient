@@ -1,28 +1,31 @@
-import { NatsClientConsumer, NatsClientStream, NatsClientStreamInfo, NatsConsumerOptions, NatsStreamMessage } from '../types';
-import { AckPolicy, Consumer, ConsumerConfig, DeliverPolicy, JetStreamClient, JetStreamManager, StoredMsg, Stream, StreamInfo } from 'nats';
-import { NatsClientConsumerImpl } from './consumer';
+import * as nats from 'nats';
+import { Consumer, Stream, StreamInfo, ConsumerOptions, StreamMessage, StreamMessageCallback } from '../types';
+import { SharedInternals } from './internals';
+import { ConsumerImpl } from './consumer';
 import { isStreamConsumerAlreadyExistsError, isStreamConsumerNotFoundError, isStreamMessageNotFoundError, isStreamNotFoundError } from '../helpers/errors';
-import { NatsClientSharedInternals } from './internals';
 
 // -----------------------------------------------------------------------------
 
-export class NatsClientStreamImpl implements NatsClientStream {
-	private js: JetStreamClient;
+/**
+ * @inheritdoc
+ */
+export class StreamImpl implements Stream {
+	private js: nats.JetStreamClient;
 
-	constructor(private stream: Stream, private jsm: JetStreamManager, private internals: NatsClientSharedInternals) {
+	constructor(private stream: nats.Stream, private jsm: nats.JetStreamManager, private internals: SharedInternals) {
 		this.js = this.jsm.jetstream();
 	}
 
 	/**
 	 * @inheritdoc
 	 */
-	public async info(): Promise<NatsClientStreamInfo> {
+	public async info(): Promise<StreamInfo> {
 		if (this.internals.isClosed()) {
-			throw new Error('NatsClient: Connection is closed');
+			throw new Error('NatsJetstreamClient: connection is closed');
 		}
 
 		// Get stream information
-		let si: StreamInfo;
+		let si: nats.StreamInfo;
 		try {
 			si = await this.stream.info(false, {
 				deleted_details: false
@@ -31,7 +34,7 @@ export class NatsClientStreamImpl implements NatsClientStream {
 		catch (err: any) {
 			// Change error if message is not found
 			if (isStreamMessageNotFoundError(err)) {
-				throw new Error('NatsClient: not found');
+				throw new Error('NatsJetstreamClient: not found');
 			}
 			throw err;
 		}
@@ -50,9 +53,9 @@ export class NatsClientStreamImpl implements NatsClientStream {
 	/**
 	 * @inheritdoc
 	 */
-	public async delete(): Promise<void> {
+	public async destroy(): Promise<void> {
 		if (this.internals.isClosed()) {
-			throw new Error('NatsClient: Connection is closed');
+			throw new Error('NatsJetstreamClient: connection is closed');
 		}
 
 		// Delete stream
@@ -70,11 +73,11 @@ export class NatsClientStreamImpl implements NatsClientStream {
 	/**
 	 * @inheritdoc
 	 */
-	public async getMessage(sequence: number): Promise<NatsStreamMessage> {
-		let m: StoredMsg;
+	public async getMessage(sequence: number): Promise<StreamMessage | null> {
+		let m: nats.StoredMsg;
 
 		if (this.internals.isClosed()) {
-			throw new Error('NatsClient: Connection is closed');
+			throw new Error('NatsJetstreamClient: connection is closed');
 		}
 
 		// Get stream and message
@@ -84,15 +87,15 @@ export class NatsClientStreamImpl implements NatsClientStream {
 			});
 		}
 		catch (err: any) {
-			// Change error if message is not found
+			// Return null if message is not found
 			if (isStreamMessageNotFoundError(err)) {
-				throw new Error('NatsClient: not found');
+				return null;
 			}
 			throw err;
 		}
 
 		// Create result
-		const msg: NatsStreamMessage =  {
+		const msg: StreamMessage =  {
 			subject: m.subject,
 			message: m.data,
 			sequence: m.seq,
@@ -114,7 +117,7 @@ export class NatsClientStreamImpl implements NatsClientStream {
 	 */
 	public async deleteMessage(sequence: number): Promise<void> {
 		if (this.internals.isClosed()) {
-			throw new Error('NatsClient: Connection is closed');
+			throw new Error('NatsJetstreamClient: connection is closed');
 		}
 
 		// Delete message
@@ -132,53 +135,68 @@ export class NatsClientStreamImpl implements NatsClientStream {
 	/**
 	 * @inheritdoc
 	 */
-	public async getConsumer(name: string): Promise<NatsClientConsumer> {
+	public async getConsumer(name: string): Promise<Consumer | null> {
 		if (this.internals.isClosed()) {
-			throw new Error('NatsClient: Connection is closed');
+			throw new Error('NatsJetstreamClient: connection is closed');
 		}
 
 		// Validate options
 		if (!/[0-9A-Za-z_-]/ui.test(name)) {
-			throw new Error('NatsClient: invalid consumer name');
+			throw new Error('NatsJetstreamClient: invalid consumer name');
 		}
 
 		// Get consumer by name
-		let consumer: Consumer;
+		let consumer: nats.Consumer;
 		try {
 			consumer = await this.js.consumers.get(this.stream.name, name);
 		}
 		catch (err: any) {
-			// Change error if stream is not found
-			if (isStreamNotFoundError(err)) {
-				throw new Error('NatsClient: not found');
+			// Return null if consumer is not found
+			if (isStreamConsumerNotFoundError(err)) {
+				return null;
 			}
 			throw err;
 		}
 
 		// Wrap
-		return new NatsClientConsumerImpl(name, consumer, this.internals);
+		return new ConsumerImpl(name, consumer, this.internals);
 	}
 
 	/**
 	 * @inheritdoc
 	 */
-	public async createConsumer(name: string, opts: NatsConsumerOptions): Promise<NatsClientConsumer> {
+	public async createConsumer(name: string, opts: ConsumerOptions): Promise<Consumer> {
 		let doUpdate = false;
 
 		if (this.internals.isClosed()) {
-			throw new Error('NatsClient: Connection is closed');
+			throw new Error('NatsJetstreamClient: connection is closed');
 		}
 
 		// Validate options
 		if (!/[0-9A-Za-z_-]/ui.test(name)) {
-			throw new Error('NatsClient: invalid consumer name');
+			throw new Error('NatsJetstreamClient: invalid consumer name');
+		}
+		if (typeof opts !== 'object' || Array.isArray(opts)) {
+			throw new Error('NatsJetstreamClient: invalid consumer options');
 		}
 		let existingAction = 'update';
 		if (opts.existingAction === 'update' || opts.existingAction === 'keep' || opts.existingAction === 'fail' ) {
 			existingAction = opts.existingAction;
 		}
 		else if (typeof opts.existingAction !== 'undefined') {
-			throw new Error('NatsClient: invalid action if the stream already exists');
+			throw new Error('NatsJetstreamClient: invalid action if the stream already exists');
+		}
+		let filter_subjects: string[] | undefined;
+		if (typeof opts.subjectFilters !== 'undefined') {
+			if (typeof opts.subjectFilters === 'string') {
+				filter_subjects = [ opts.subjectFilters ];
+			}
+			else if (Array.isArray(opts.subjectFilters)) {
+				filter_subjects = opts.subjectFilters;
+			}
+			else {
+				throw new Error('NatsJetstreamClient: invalid consumer\'s filter subject');
+			}
 		}
 
 		// Quick path, try to get an existing consumer first
@@ -189,7 +207,7 @@ export class NatsClientStreamImpl implements NatsClientStream {
 					return consumer;
 				}
 				if (existingAction == 'fail') {
-					throw new Error('NatsClient: Already exists');
+					throw new Error('NatsJetstreamClient: Already exists');
 				}
 				doUpdate = true;
 			}
@@ -199,47 +217,53 @@ export class NatsClientStreamImpl implements NatsClientStream {
 		};
 
 		// Configure the consumer settings
-		const addUpdateOptions: Partial<ConsumerConfig> = {
+		const addUpdateOptions: Partial<nats.ConsumerConfig> = {
 			name,
 			durable_name: name,
-			ack_policy: AckPolicy.Explicit,
-			deliver_policy: DeliverPolicy.New,
-			filter_subject: opts.subjectFilter,
+			ack_policy: nats.AckPolicy.Explicit,
+			deliver_policy: nats.DeliverPolicy.All,
+			filter_subjects,
 			max_ack_pending: -1
 		};
 		if (typeof opts.deliverPolicy === 'string') {
 			switch (opts.deliverPolicy) {
-				case 'new':
-					break;
-				case'last':
-					addUpdateOptions.deliver_policy = DeliverPolicy.Last;
-					break;
 				case'all':
-					addUpdateOptions.deliver_policy = DeliverPolicy.All;
 					break;
+
+				case 'new':
+					addUpdateOptions.deliver_policy = nats.DeliverPolicy.New;
+					break;
+
+				case'last':
+					addUpdateOptions.deliver_policy = nats.DeliverPolicy.Last;
+					break;
+
 				case'sequence':
-					addUpdateOptions.deliver_policy = DeliverPolicy.StartSequence;
+					addUpdateOptions.deliver_policy = nats.DeliverPolicy.StartSequence;
 					if (typeof opts.deliverStartSequence !== 'number' || opts.deliverStartSequence < 0) {
-						throw new Error('NatsClient: Invalid delivery start sequence number in options');
+						throw new Error('NatsJetstreamClient: invalid delivery start sequence number in options');
 					}
 					addUpdateOptions.opt_start_seq = opts.deliverStartSequence;
 					break;
+
 				case'time':
-					addUpdateOptions.deliver_policy = DeliverPolicy.StartTime;
+					addUpdateOptions.deliver_policy = nats.DeliverPolicy.StartTime;
 					if (!(opts.deliverStartTime && opts.deliverStartTime instanceof Date)) {
-						throw new Error('NatsClient: Invalid delivery start sequence number in options');
+						throw new Error('NatsJetstreamClient: invalid delivery start sequence number in options');
 					}
 					addUpdateOptions.opt_start_time = opts.deliverStartTime.toISOString();
 					break;
+
 				case'subject-last':
-					addUpdateOptions.deliver_policy = DeliverPolicy.LastPerSubject;
+					addUpdateOptions.deliver_policy = nats.DeliverPolicy.LastPerSubject;
 					break;
+
 				default:
-					throw new Error('NatsClient: Invalid delivery policy in options');
+					throw new Error('NatsJetstreamClient: invalid delivery policy in options');
 			}
 		}
 		else if (typeof opts.deliverPolicy !== 'undefined' && opts.deliverPolicy !== 'new') {
-			throw new Error('NatsClient: Invalid delivery policy in options');
+			throw new Error('NatsJetstreamClient: invalid delivery policy in options');
 		}
 
 		if (!doUpdate) {
@@ -264,31 +288,65 @@ export class NatsClientStreamImpl implements NatsClientStream {
 			catch (err: any) {
 				// Change error if stream is not found
 				if (isStreamConsumerNotFoundError(err)) {
-					throw new Error('NatsClient: not found');
+					throw new Error('NatsJetstreamClient: unexpected not found');
 				}
 				throw err;
 			}
 		}
 
 		// Done
-		return this.getConsumer(name);
+		const consumer = await this.getConsumer(name);
+		if (!consumer) {
+			throw new Error('NatsJetstreamClient: unexpected not found');
+		}
+		return consumer;
 	}
 
 	/**
 	 * @inheritdoc
 	 */
 	public async deleteConsumer(name: string): Promise<void> {
-		let consumer: NatsClientConsumer;
+		const consumer = await this.getConsumer(name);
+		if (consumer) {
+			await consumer.destroy();
+		}
+	}
 
-		try {
-			consumer = await this.getConsumer(name);
+	/**
+	 * @inheritdoc
+	 */
+	public async subscribeConsumer(name: string, cb: StreamMessageCallback): Promise<void> {
+		if (this.internals.isClosed()) {
+			throw new Error('NatsJetstreamClient: connection is closed');
 		}
-		catch (err: any) {
-			if (err.message && err.message.indexOf('not found') >= 0) {
-				return;
+
+		// Get the consumer
+		const consumer = await this.getConsumer(name);
+		if (!consumer) {
+			throw new Error('NatsJetstreamClient: consumer not found');
+		}
+
+		// And subscribe
+		await consumer.subscribe(cb);
+	}
+
+	/**
+	 * @inheritdoc
+	 */
+	public async unsubscribeConsumer(name: string): Promise<void> {
+		// Shortcut for getting the consumer and unsubscribing it
+		if (!this.internals.isClosed()) {
+			// Find the subscription
+			const consumerMessages = this.internals.getAndRemoveConsumerSubscription(name);
+			if (consumerMessages) {
+				// Unsubscribe
+				try {
+					await consumerMessages.close();
+				}
+				catch (_err: any) {
+					// Ingore errors
+				}
 			}
-			throw err;
 		}
-		await consumer.delete();
 	}
 };

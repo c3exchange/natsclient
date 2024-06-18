@@ -1,10 +1,10 @@
-import { ConsumerMessages, Subscription } from 'nats';
+import * as nats from 'nats';
 
 // -----------------------------------------------------------------------------
 
-export class NatsClientSharedInternals {
-	private subscriptions = new Map<string, Subscription>();
-	private consumerSubscriptions = new Map<string, ConsumerMessages>();
+export class SharedInternals {
+	private subscriptions = new Map<string, nats.Subscription>();
+	private consumerSubscriptions = new Map<string, nats.ConsumerMessages>();
 	private closed = false;
 	private nextId = 0;
 
@@ -45,11 +45,11 @@ export class NatsClientSharedInternals {
 		return this.subscriptions.has(subject);
 	}
 
-	public addSubscription(subscription: Subscription): void {
+	public addSubscription(subscription: nats.Subscription): void {
 		this.subscriptions.set(subscription.getSubject(), subscription);
 	}
 
-	public getAndRemoveSubscription(subject: string): Subscription | undefined {
+	public getAndRemoveSubscription(subject: string): nats.Subscription | undefined {
 		const subscription = this.subscriptions.get(subject);
 		if (subscription) {
 			this.subscriptions.delete(subject);
@@ -61,15 +61,36 @@ export class NatsClientSharedInternals {
 		return this.consumerSubscriptions.has(consumerName);
 	}
 
-	public addConsumerSubscription(consumerName: string, consumerMessages: ConsumerMessages): void {
+	public addConsumerSubscription(consumerName: string, consumerMessages: nats.ConsumerMessages): void {
 		this.consumerSubscriptions.set(consumerName, consumerMessages);
 	}
 
-	public getAndRemoveConsumerSubscription(consumerName: string): ConsumerMessages | undefined {
+	public getAndRemoveConsumerSubscription(consumerName: string): nats.ConsumerMessages | undefined {
 		const consumerMessages = this.consumerSubscriptions.get(consumerName);
 		if (consumerMessages) {
 			this.consumerSubscriptions.delete(consumerName);
 		}
 		return consumerMessages;
 	}
-}
+};
+
+export function NoopKvCodecs() {
+	return {
+		key: {
+			encode(k: string): string {
+				return k;
+			},
+			decode(k: string): string {
+				return k;
+			}
+		},
+		value: {
+			encode(v: Uint8Array): Uint8Array {
+				return v;
+			},
+			decode(v: Uint8Array): Uint8Array {
+				return v;
+			}
+		}
+	};
+};
