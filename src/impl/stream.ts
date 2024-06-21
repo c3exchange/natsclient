@@ -3,6 +3,7 @@ import { Consumer, Stream, StreamInfo, ConsumerOptions, StreamMessage, StreamMes
 import { SharedInternals } from './internals';
 import { ConsumerImpl } from './consumer';
 import { isStreamConsumerAlreadyExistsError, isStreamConsumerNotFoundError, isStreamMessageNotFoundError, isStreamNotFoundError } from '../helpers/errors';
+import { validateSubject } from '../helpers/validators';
 
 // -----------------------------------------------------------------------------
 
@@ -197,6 +198,11 @@ export class StreamImpl implements Stream {
 			else {
 				throw new Error('NatsJetstreamClient: invalid consumer\'s filter subject');
 			}
+			for (const subject of filter_subjects) {
+				if (!validateSubject(subject, true)) {
+					throw new Error('NatsJetstreamClient: invalid consumer\'s filter subject');
+				}
+			}
 		}
 
 		// Quick path, try to get an existing consumer first
@@ -207,7 +213,7 @@ export class StreamImpl implements Stream {
 					return consumer;
 				}
 				if (existingAction == 'fail') {
-					throw new Error('NatsJetstreamClient: Already exists');
+					throw new Error('NatsJetstreamClient: already exists');
 				}
 				doUpdate = true;
 			}
@@ -305,7 +311,7 @@ export class StreamImpl implements Stream {
 	/**
 	 * @inheritdoc
 	 */
-	public async deleteConsumer(name: string): Promise<void> {
+	public async destroyConsumer(name: string): Promise<void> {
 		const consumer = await this.getConsumer(name);
 		if (consumer) {
 			await consumer.destroy();

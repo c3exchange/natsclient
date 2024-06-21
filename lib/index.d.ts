@@ -148,6 +148,7 @@ export interface StreamMessageAck extends StreamMessage {
 	/**
 	 * Indicate to the JetStream server that processing of the message failed,
 	 * and that it should be resent after the spefied number of milliseconds.
+	 * @method nak
 	 * @param {number|undefined} millis
 	 */
 	nak: (millis?: number) => void;
@@ -234,7 +235,7 @@ export interface Consumer {
 	 * Ends the subscription.
 	 * It does not throw errors if the connection is closed or the subscription does not exists.
 	 * @async
-	 * @method subscribe
+	 * @method unsubscribe
 	 */
 	unsubscribe: () => Promise<void>;
 }
@@ -379,13 +380,13 @@ export interface Stream {
 	 */
 	createConsumer: (name: string, opts: ConsumerOptions) => Promise<Consumer>;
 	/**
-	 * Deletes an existing JetStream consumer.
+	 * Destroys an existing JetStream consumer.
 	 * It does not throw errors if the consumer does not exists.
 	 * @async
-	 * @method deleteConsumer
+	 * @method destroyConsumer
 	 * @param {string} name - Name of the consumer to delete.
 	 */
-	deleteConsumer: (name: string) => Promise<void>;
+	destroyConsumer: (name: string) => Promise<void>;
 	/**
 	 * Starts a subscription for messages based on the given consumer.
 	 * @async

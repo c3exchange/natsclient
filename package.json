@@ -1,63 +1,50 @@
 {
-  "name": "@c3exchange/natsjetstreamclient",
-  "version": "0.1.0",
-  "description": "A NATS.io/JetStream client library",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
-  "scripts": {
-    "clean": "rimraf -I lib",
-    "build": "npm run clean && tsc && npm run gen:decl",
-    "gen:decl": "dts-bundle-generator -o lib/index.d.ts -no-banner src/index.ts",
-    "prepack": "npm run build",
-    "test": "npm run clean && tsc --build tsconfig.tests.json && ava",
-    "lint": "eslint"
-  },
-  "homepage": "https://github.com/c3exchange/natsclient",
-  "repository": {
-    "type": "git",
-    "url": "git@github.com:c3exchange/natsclient.js.git"
-  },
-  "bugs": {
-    "url": "https://github.com/c3exchange/natsclient/issues"
-  },
-  "author": "C3.io",
-  "license": "MIT",
-  "engines": {
-    "node": ">= 18.0.0"
-  },
-  "dependencies": {
-    "nats": "^2.26.0"
-  },
-  "devDependencies": {
-    "@ava/typescript": "^5.0.0",
-    "@eslint/js": "^9.4.0",
-    "@types/node": "^20.12.13",
-    "ava": "^6.1.3",
-    "dotenv": "^16.4.5",
-    "dts-bundle-generator": "^9.5.1",
-    "eslint": "^9.4.0",
-    "rimraf": "^5.0.7",
-    "typescript": "^5.4.5",
-    "typescript-eslint": "^8.0.0-alpha.10"
-  },
-  "files": [
-    "package.json",
-    "*.md",
-    "LICENSE",
-    "lib/**/*",
-    "src/**/*"
-  ],
-  "ava": {
-    "files": [
-      "**/*.test.ts"
-    ],
-    "cache": false,
-    "verbose": true,
-    "typescript": {
-      "rewritePaths": {
-        "src/": "lib/"
-      },
-      "compile": false
-    }
-  }
+	"name": "@c3exchange/natsjetstreamclient",
+	"version": "0.1.1",
+	"description": "A NATS.io/JetStream client library",
+	"main": "lib/index.js",
+	"types": "lib/index.d.ts",
+	"scripts": {
+		"clean": "rimraf -I lib",
+		"build": "npm run clean && tsc && npm run gen:decl",
+		"gen:decl": "dts-bundle-generator -o lib/index.d.ts -no-banner src/index.ts",
+		"prepack": "npm run build",
+		"test": "npm run clean && tsc --build tsconfig.tests.json && node lib/tests/run-tests.js",
+		"lint": "eslint"
+	},
+	"homepage": "https://github.com/c3exchange/natsjetstreamclient",
+	"repository": {
+		"type": "git",
+		"url": "git@github.com:c3exchange/natsjetstreamclient.git"
+	},
+	"bugs": {
+		"url": "https://github.com/c3exchange/natsjetstreamclient/issues"
+	},
+	"author": "C3.io",
+	"license": "MIT",
+	"engines": {
+		"node": ">= 18.0.0"
+	},
+	"dependencies": {
+		"nats": "^2.26.0"
+	},
+	"devDependencies": {
+		"@eslint/js": "^9.5.0",
+		"@types/node": "^20.14.5",
+		"ansi-colors": "^4.1.3",
+		"dotenv": "^16.4.5",
+		"dts-bundle-generator": "^9.5.1",
+		"eslint": "^9.5.0",
+		"glob": "^10.4.2",
+		"rimraf": "^5.0.7",
+		"typescript": "^5.4.5",
+		"typescript-eslint": "^8.0.0-alpha.30"
+	},
+	"files": [
+		"package.json",
+		"*.md",
+		"LICENSE",
+		"lib/**/*",
+		"src/**/*"
+	]
 }

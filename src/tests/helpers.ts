@@ -1,6 +1,7 @@
-import { ExecutionContext } from 'ava';
+import { strict as assert } from 'node:assert';
 import { config as dotEnvConfig } from 'dotenv';
 import path from 'path';
+import colors from 'ansi-colors';
 import { Client, ClientCredentials } from '..';
 
 // -----------------------------------------------------------------------------
@@ -22,25 +23,25 @@ export const getTimestamp = (): string => {
 	return `${hours}:${minutes}:${seconds}.${milliseconds}`;
 };
 
-export const loadConfig = (t: ExecutionContext): void => {
-	try {
-		dotEnvConfig({
-			path: path.resolve(process.cwd(), 'tests.env'),
-			override: true
-		});
-	}
-	catch (err: any) {
-		t.fail(err.toString());
-	}
-	if (typeof process.env['NATS_TEST_HOST'] !== 'string' || process.env['NATS_TEST_HOST'].length == 0) {
-		t.fail('NATS_TEST_HOST not found. Cannot continue this test.');
-	}
-	if (typeof process.env['NATS_TEST_JWT'] !== 'string' || process.env['NATS_TEST_JWT'].length == 0) {
-		t.fail('NATS_TEST_JWT not found. Cannot continue this test.');
-	}
-	if (typeof process.env['NATS_TEST_NKEY_SEED'] !== 'string' || process.env['NATS_TEST_NKEY_SEED'].length == 0) {
-		t.fail('NATS_TEST_JWT not found. Cannot continue this test.');
-	}
+export const loadConfig = (): void => {
+	log('Loading settings...');
+
+	dotEnvConfig({
+		path: path.resolve(process.cwd(), 'tests.env'),
+		override: true
+	});
+
+	assert(typeof process.env['NATS_TEST_HOST'] === 'string', 'NATS_TEST_HOST not found or empty');
+	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+	assert(process.env['NATS_TEST_HOST']!.length > 0, 'NATS_TEST_HOST not found or empty');
+
+	assert(typeof process.env['NATS_TEST_JWT'] === 'string', 'NATS_TEST_JWT not found or empty');
+	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+	assert(process.env['NATS_TEST_JWT']!.length > 0, 'NATS_TEST_JWT not found or empty');
+
+	assert(typeof process.env['NATS_TEST_NKEY_SEED'] === 'string', 'NATS_TEST_NKEY_SEED not found or empty');
+	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+	assert(process.env['NATS_TEST_NKEY_SEED']!.length > 0, 'NATS_TEST_NKEY_SEED not found or empty');
 };
 
 export const getConfig = (): Config => {
@@ -54,7 +55,20 @@ export const getConfig = (): Config => {
 			nkeySeed: process.env['NATS_TEST_NKEY_SEED']!
 		}
 	};
-}
+};
+
+export const log = (msg: string, type?: string): void => {
+	if (type === 'title') {
+		msg = colors.yellow(msg);
+	}
+	else if (type === 'success') {
+		msg = colors.greenBright(msg);
+	}
+	else if (type === 'error') {
+		msg = colors.redBright(msg);
+	}
+	console.log(colors.cyan(getTimestamp()) + ' ' + colors.yellow('|') + ' ' + msg);
+};
 
 export const errMsg = (err: any): string => {
 	if (err.message) {
@@ -93,8 +107,8 @@ export const verifyTestMsg = (s: string): number => {
 	return parseInt(s.substring(7), 10);
 };
 
-export const monitorClientAndLog = (t: ExecutionContext, client: Client) => {
+export const monitorClientAndLog = (client: Client) => {
 	client.on('status', (status: Record<string, any>) => {
-		t.log('[' + client.name + '] status: ' + status.connection);
+		log(client.name + '/Status: ' + status.connection);
 	});
 };

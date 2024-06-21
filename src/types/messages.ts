@@ -55,6 +55,7 @@ export interface StreamMessageAck extends StreamMessage {
 	/**
 	 * Indicate to the JetStream server that processing of the message failed,
 	 * and that it should be resent after the spefied number of milliseconds.
+	 * @method nak
 	 * @param {number|undefined} millis
 	 */
 	nak: (millis?: number) => void

@@ -6,7 +6,8 @@
 			"name": "Run tests",
 			"request": "launch",
 			"command": "npm run test",
-			"cwd": "${workspaceFolder}"
+			"cwd": "${workspaceFolder}",
+			"sourceMaps": true
 		}
 	]
 }

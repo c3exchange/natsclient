@@ -166,13 +166,13 @@ export interface Stream {
 	createConsumer: (name: string, opts: ConsumerOptions) => Promise<Consumer>;
 
 	/**
-	 * Deletes an existing JetStream consumer.
+	 * Destroys an existing JetStream consumer.
 	 * It does not throw errors if the consumer does not exists.
 	 * @async
-	 * @method deleteConsumer
+	 * @method destroyConsumer
 	 * @param {string} name - Name of the consumer to delete.
 	 */
-	deleteConsumer: (name: string) => Promise<void>;
+	destroyConsumer: (name: string) => Promise<void>;
 
 	/**
 	 * Starts a subscription for messages based on the given consumer.

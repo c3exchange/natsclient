@@ -6,6 +6,7 @@ import { NoopKvCodecs, SharedInternals } from './impl/internals';
 import { isLastMsgIdMismatchError, isLastSequenceMismatchError, isStreamAlreadyExistsError, isStreamNotFoundError } from './helpers/errors';
 import { EventEmitter } from 'node:events';
 import { KvBucketImpl } from './impl/kv';
+import { validateSubject } from './helpers/validators';
 
 // -----------------------------------------------------------------------------
 
@@ -180,6 +181,11 @@ export class Client extends EventEmitter {
 			throw new Error('NatsJetstreamClient: connection is closed');
 		}
 
+		// Validate subject
+		if (!validateSubject(subject, false)) {
+			throw new Error('NatsJetstreamClient: invalid subject');
+		}
+
 		// Configure publish options
 		const publishOpts: nats.PublishOptions = {};
 		if (headers) {
@@ -206,9 +212,14 @@ export class Client extends EventEmitter {
 			throw new Error('NatsJetstreamClient: connection is closed');
 		}
 
+		// Validate subject
+		if (!validateSubject(subject, true)) {
+			throw new Error('NatsJetstreamClient: invalid subject');
+		}
+
 		// Check if a subscription already exists
 		if (this.internals.hasSubscription(subject)) {
-			throw new Error('NatsJetstreamClient: Already subscribed');
+			throw new Error('NatsJetstreamClient: already subscribed');
 		}
 
 		// Promisify callback
@@ -338,6 +349,13 @@ export class Client extends EventEmitter {
 		else {
 			throw new Error('NatsJetstreamClient: invalid subjects in options');
 		};
+		// Validate subjects
+		for (const subject of subjects) {
+			if (!validateSubject(subject, true)) {
+				throw new Error('NatsJetstreamClient: invalid subject');
+			}
+		}
+
 		if (typeof opts.duplicateWindowTimeoutMs !== 'undefined') {
 			if (typeof opts.duplicateWindowTimeoutMs !== 'number' || opts.duplicateWindowTimeoutMs < 1) {
 				throw new Error('NatsJetstreamClient: invalid duplicate window timeout in options');
@@ -360,7 +378,7 @@ export class Client extends EventEmitter {
 					return stream;
 				}
 				if (existingAction == 'fail') {
-					throw new Error('NatsJetstreamClient: Already exists');
+					throw new Error('NatsJetstreamClient: already exists');
 				}
 				doUpdate = true;
 			}
@@ -465,6 +483,8 @@ export class Client extends EventEmitter {
 
 		// Get bucket by name
 		try {
+			// We must verify if the underlying stream does exist because the javascript SDK does not do it :(
+			await this.jsm.streams.get('KV_' + name);
 			kv = await this.js.views.kv(name, {
 				streamName: 'KV_' + name,
 				codec: NoopKvCodecs(),
@@ -567,6 +587,11 @@ export class Client extends EventEmitter {
 	public async publishToStream(subject: string, message: Uint8Array, headers?: MessageHeaders, opts?: StreamPublishOptions): Promise<StreamPublishedInfo> {
 		if (this.internals.isClosed()) {
 			throw new Error('NatsJetstreamClient: connection is closed');
+		}
+
+		// Validate subject
+		if (!validateSubject(subject, false)) {
+			throw new Error('NatsJetstreamClient: invalid subject');
 		}
 
 		// Build message publish parameters based on the provided options

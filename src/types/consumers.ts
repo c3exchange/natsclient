@@ -71,7 +71,7 @@ export interface Consumer {
 	 * Ends the subscription.
 	 * It does not throw errors if the connection is closed or the subscription does not exists.
 	 * @async
-	 * @method subscribe
+	 * @method unsubscribe
 	 */
 	unsubscribe: () => Promise<void>;
 };

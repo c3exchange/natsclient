@@ -90,7 +90,7 @@ export class KvBucketImpl implements KvBucket {
 		}
 		catch (err: any) {
 			if (isLastSequenceMismatchError(err)) {
-				throw new Error('NatsJetstreamClient: Last sequence mismatch');
+				throw new Error('NatsJetstreamClient: last sequence mismatch');
 			}
 			throw err;
 		}
@@ -126,7 +126,7 @@ export class KvBucketImpl implements KvBucket {
 		}
 		catch (err: any) {
 			if (isLastSequenceMismatchError(err)) {
-				throw new Error('NatsJetstreamClient: Last sequence mismatch');
+				throw new Error('NatsJetstreamClient: last sequence mismatch');
 			}
 			throw err;
 		}

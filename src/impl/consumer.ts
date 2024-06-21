@@ -42,7 +42,7 @@ export class ConsumerImpl implements Consumer {
 
 		// Check if a subscription already exists
 		if (this.internals.hasConsumerSubscription(this.name)) {
-			throw new Error('NatsJetstreamClient: Already subscribed');
+			throw new Error('NatsJetstreamClient: already subscribed');
 		}
 
 		// Promisify callback
