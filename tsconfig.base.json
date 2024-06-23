@@ -6,7 +6,6 @@
 		"allowJs": true,
 		"strict": true,
 		"forceConsistentCasingInFileNames": true,
-		// "noEmit": true,
 		"esModuleInterop": true,
 		"module": "node16",
 		"resolveJsonModule": true,
