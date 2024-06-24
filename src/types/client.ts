@@ -46,9 +46,15 @@ export interface ClientOptions {
 
 /**
  * Credentials to use when establishing a connection to the server.
- * @interface ClientCredentials
+ * @@type ClientCredentials
  */
-export interface ClientCredentials {
+export type ClientCredentials = ClientCredentialsJWT | ClientCredentialsLegacy | ClientCredentialsToken;
+
+/**
+ * Credentials to use when establishing a connection to the server.
+ * @interface ClientCredentialsJWT
+ */
+export interface ClientCredentialsJWT {
 	/**
 	 * The JWT describes the account to use and its capabilities.
 	 * @type {string}
@@ -60,6 +66,36 @@ export interface ClientCredentials {
 	 * @type {string}
 	 */
 	nkeySeed: string;
+};
+
+/**
+ * Legacy credentials to use when establishing a connection to the server.
+ * @interface ClientCredentialsLegacy
+ */
+export interface ClientCredentialsLegacy {
+	/**
+	 * User name.
+	 * @type {string}
+	 */
+	username: string;
+
+	/**
+	 * Password.
+	 * @type {string}
+	 */
+	password: string;
+};
+
+/**
+ * Credentials to use when establishing a connection to the server with a token.
+ * @interface ClientCredentialsToken
+ */
+export interface ClientCredentialsToken {
+	/**
+	 * Access token.
+	 * @type {string}
+	 */
+	token: string;
 };
 
 /**

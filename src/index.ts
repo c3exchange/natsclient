@@ -1,6 +1,6 @@
 import * as nats from 'nats';
 export * from './types';
-import { ClientOptions, Message, MessageCallback, MessageHeaders, StreamOptions, StreamPublishOptions, StreamPublishedInfo, Stream, KvBucket, KvBucketOptions } from './types';
+import { ClientOptions, Message, MessageCallback, MessageHeaders, StreamOptions, StreamPublishOptions, StreamPublishedInfo, Stream, KvBucket, KvBucketOptions, ClientCredentialsJWT, ClientCredentialsLegacy, ClientCredentialsToken } from './types';
 import { StreamImpl } from './impl/stream';
 import { NoopKvCodecs, SharedInternals } from './impl/internals';
 import { isLastMsgIdMismatchError, isLastSequenceMismatchError, isStreamAlreadyExistsError, isStreamNotFoundError } from './helpers/errors';
@@ -26,7 +26,7 @@ export class Client extends EventEmitter {
 	 * @returns {Client} - The client accessor.
 	 */
 	public static async create(opts: ClientOptions): Promise<Client> {
-		let nkeySeed: Uint8Array;
+		const auth: any = {};
 
 		// Validate options
 		if (typeof opts !== 'object' || Array.isArray(opts)) {
@@ -65,20 +65,49 @@ export class Client extends EventEmitter {
 		if (typeof opts.credentials !== 'object' || Array.isArray(opts.credentials)) {
 			throw new Error('NatsJetstreamClient: invalid credentials provided');
 		}
+		if (typeof (opts.credentials as ClientCredentialsToken).token === 'string') {
+			const cred = opts.credentials as ClientCredentialsToken;
 
-		const parts = (typeof opts.credentials.jwt === 'string') ? opts.credentials.jwt.split('.') : [];
-		if (parts.length !== 3 || parts[0].length == 0 || parts[1].length == 0 || parts[2].length == 0) {
-			throw new Error('NatsJetstreamClient: invalid credentials provided');
-		}
+			if (cred.token.length == 0) {
+				throw new Error('NatsJetstreamClient: invalid credentials provided');
+			}
 
-		// Validate key seed
-		if (typeof opts.credentials.nkeySeed !== 'string' || opts.credentials.nkeySeed.length == 0) {
-			throw new Error('NatsJetstreamClient: invalid credentials provided');
+			auth.token = cred.token;
 		}
-		try {
-			nkeySeed = new Uint8Array(Buffer.from(opts.credentials.nkeySeed, 'utf8'));
+		else if (typeof (opts.credentials as ClientCredentialsJWT).jwt === 'string') {
+			let nkeySeed: Uint8Array;
+
+			const cred = opts.credentials as ClientCredentialsJWT;
+			const parts = cred.jwt.split('.');
+			if (parts.length !== 3 || parts[0].length == 0 || parts[1].length == 0 || parts[2].length == 0) {
+				throw new Error('NatsJetstreamClient: invalid credentials provided');
+			}
+
+			// Validate key seed
+			if (typeof cred.nkeySeed !== 'string' || cred.nkeySeed.length == 0) {
+				throw new Error('NatsJetstreamClient: invalid credentials provided');
+			}
+			try {
+				nkeySeed = new Uint8Array(Buffer.from(cred.nkeySeed, 'utf8'));
+			}
+			catch (_err: any) {
+				throw new Error('NatsJetstreamClient: invalid credentials provided');
+			}
+
+			// Create JWT authenticator
+			auth.authenticator = nats.jwtAuthenticator(cred.jwt, nkeySeed);
 		}
-		catch (_err: any) {
+		else if (typeof (opts.credentials as ClientCredentialsLegacy).username === 'string') {
+			const cred = opts.credentials as ClientCredentialsLegacy;
+
+			if (typeof cred.password !== 'string' || cred.username.length == 0 || cred.password.length == 0) {
+				throw new Error('NatsJetstreamClient: invalid credentials provided');
+			}
+
+			auth.user = cred.username;
+			auth.pass = cred.password;
+		}
+		else {
 			throw new Error('NatsJetstreamClient: invalid credentials provided');
 		}
 
@@ -115,7 +144,7 @@ export class Client extends EventEmitter {
 		const conn = await nats.connect({
 			servers,
 			debug: opts.debug,
-			authenticator: nats.jwtAuthenticator(opts.credentials.jwt, nkeySeed),
+			...auth,
 			maxReconnectAttempts: -1,
 			reconnectTimeWait: 500,
 			timeout: 10000,
