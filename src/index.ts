@@ -1,6 +1,6 @@
 import * as nats from 'nats';
 export * from './types';
-import { ClientOptions, Message, MessageCallback, MessageHeaders, StreamOptions, StreamPublishOptions, StreamPublishedInfo, Stream, KvBucket, KvBucketOptions, ClientCredentialsJWT, ClientCredentialsLegacy, ClientCredentialsToken } from './types';
+import { ClientOptions, Message, MessageCallback, MessageHeaders, StreamOptions, StreamPublishOptions, StreamPublishedInfo, Stream, KvBucket, KvBucketOptions, ClientCredentialsJWT, ClientCredentialsLegacy, ClientCredentialsToken, ClientEventsMap } from './types';
 import { StreamImpl } from './impl/stream';
 import { NoopKvCodecs, SharedInternals } from './impl/internals';
 import { isLastMsgIdMismatchError, isLastSequenceMismatchError, isStreamAlreadyExistsError, isStreamNotFoundError } from './helpers/errors';
@@ -14,9 +14,9 @@ import { validateSubject } from './helpers/validators';
  * Implements a connector to a NATS.io JetStream instance.
  * @class Client
  */
-export class Client extends EventEmitter {
+export class Client extends EventEmitter<ClientEventsMap> {
 	private js: nats.JetStreamClient;
-	private internals = new SharedInternals();
+	private internals: SharedInternals;
 
 	/**
 	 * Creates a new NATS.io/JetStream client object.
@@ -115,14 +115,14 @@ export class Client extends EventEmitter {
 		let tls: nats.TlsOptions | undefined;
 		if (opts.tls !== 'never') {
 			if (opts.tls && opts.tls !== 'auto') {
-				if (opts.tls === 'enforce') {
+				if (opts.tls === 'always') {
 					tls = {
 						handshakeFirst: true
 					};
 				}
 				else if (typeof opts.tls === 'object' && (!Array.isArray(opts.tls))) {
 					tls = {
-						handshakeFirst: opts.tls.enforce || false,
+						handshakeFirst: opts.tls.enforce === true,
 						certFile: opts.tls.certFile,
 						cert: opts.tls.cert,
 						caFile: opts.tls.caFile,
@@ -150,7 +150,9 @@ export class Client extends EventEmitter {
 			timeout: 10000,
 			name: opts.name,
 			noEcho: opts.enableEcho ? false : true,
-			tls
+			tls,
+			ignoreAuthErrorAbort: false,
+			reconnect: true
 		});
 
 		// Get stream mamanger
@@ -168,6 +170,7 @@ export class Client extends EventEmitter {
 	protected constructor(private _name: string, private conn: nats.NatsConnection, private jsm: nats.JetStreamManager) {
 		super();
 		this.js = jsm.jetstream();
+		this.internals = new SharedInternals(this.conn);
 		this.statusMonitor();
 	}
 
@@ -233,10 +236,11 @@ export class Client extends EventEmitter {
 	/**
 	 * Creates a subscription for ephemeral messages based on the given subject.
 	 * @method subscribe
+	 * @async
 	 * @param {string} subject - The topic to subscribe.
 	 * @param {MessageCallback} cb - Asynchronous callback to call when a new message arrives.
 	 */
-	public subscribe(subject: string, cb: MessageCallback): void {
+	public async subscribe(subject: string, cb: MessageCallback): Promise<void> {
 		if (this.internals.isClosed()) {
 			throw new Error('NatsJetstreamClient: connection is closed');
 		}
@@ -267,9 +271,9 @@ export class Client extends EventEmitter {
 		this.internals.addSubscription(subscription);
 
 		// Start a background worker that "listens" for incoming messages
-		(async () => {
+		(async (_that) => {
 			for await (const m of subscription) {
-				if (this.internals.isClosed()) {
+				if (_that.internals.isClosed()) {
 					break;
 				}
 
@@ -292,24 +296,31 @@ export class Client extends EventEmitter {
 					// Eat errors raised by the callback
 				}
 			}
-		})().catch(() => null).finally(() => {
+		})(this).catch(() => null).finally(() => {
 			this.unsubscribe(subject);
 		});
+
+		// Ensure the subscription message is sent before retuning
+		await this.conn.flush();
 	}
 
 	/**
 	 * Destroys an active subscription for ephemeral messages on the given subject.
 	 * It does not throw errors if the connection is closed or the subscription does not exists.
+	 * @async
 	 * @method unsubscribe
 	 * @param {string} subject - The topic to unsubscribe.
 	 */
-	public unsubscribe(subject: string) {
+	public async unsubscribe(subject: string) {
 		if (!this.internals.isClosed()) {
 			// Find the subscription
 			const subscription = this.internals.getAndRemoveSubscription(subject);
 			if (subscription) {
 				// Unsubscribe
 				subscription.unsubscribe();
+
+				// Ensure the unsubscription message is sent before retuning
+				await this.conn.flush();
 			}
 		}
 	}
@@ -685,14 +696,10 @@ export class Client extends EventEmitter {
 				}
 				switch (s.type) {
 					case 'reconnect':
-						_that.emit('status', {
-							connection: 'connected'
-						});
+						_that.emit('status', 'connected');
 						break;
 					case 'disconnect':
-						_that.emit('status', {
-							connection: 'disconnected'
-						});
+						_that.emit('status', 'disconnected');
 						break;
  				}
 			}

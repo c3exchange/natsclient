@@ -17,10 +17,10 @@ export interface ClientOptions {
 
 	/**
 	 * Configure if a secure channel must be used.
-	 * @type {ClientTlsConfig | 'enforce' | 'never' | 'auto' | undefined}
+	 * @type {ClientTlsConfig | undefined}
 	 * @default 'auto'
 	 */
-	tls?: ClientTlsConfig | 'enforce' | 'never' | 'auto';
+	tls?: ClientTlsConfig;
 
 	/**
 	 * Custom name to identify this client.
@@ -99,10 +99,16 @@ export interface ClientCredentialsToken {
 };
 
 /**
- * TLS configuration options used while connecting to a server.
- * @interface ClientTlsConfig
+ * TLS configuration to use.
+ * @type ClientTlsConfig
  */
-export interface ClientTlsConfig {
+export type ClientTlsConfig = ClientTlsOptions | 'always' | 'never' | 'auto'
+
+/**
+ * TLS configuration options used while connecting to a server.
+ * @interface ClientTlsOptions
+ */
+export interface ClientTlsOptions {
 	/**
 	 * Forces to use TLS.
 	 * @type {boolean | undefined}
@@ -143,3 +149,11 @@ export interface ClientTlsConfig {
 	 */
 	key?: string;
 };
+
+/**
+ * Define an interface for the events and their corresponding listener arguments
+ * @interface ClientEventsMap
+ */
+export interface ClientEventsMap {
+	'status': [ connection: 'connected' | 'disconnected' ];
+}

@@ -1,6 +1,7 @@
 import { strict as assert } from 'node:assert';
 import { Client, StreamMessageAck } from '..';
-import { loadConfig, encodeMsg, generateTestMsg, verifyTestMsg, log, sleep, monitorClientAndLog, getConfig } from './helpers';
+import { getConfig, loadConfig } from './config';
+import { encodeMsg, generateTestMsg, verifyTestMsg, log, sleep, monitorClientAndLog } from './helpers';
 
 // -----------------------------------------------------------------------------
 
@@ -10,7 +11,7 @@ const runTests = async () => {
 	loadConfig();
 
 	// Connect to the test server
-	log('Connecting...');
+	log('Connecting to ' + JSON.stringify(getConfig().servers) + '...');
 	const producer = await Client.create({
 		...getConfig(),
 		name: 'NatsJetstreamJsClient-jetstream-test-producer'

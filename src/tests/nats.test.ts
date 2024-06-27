@@ -1,6 +1,7 @@
 import { strict as assert } from 'node:assert';
 import { Client, Message } from '..';
-import { loadConfig, encodeMsg, decodeMsg, generateTestMsg, verifyTestMsg, log, sleep, monitorClientAndLog, getConfig } from './helpers';
+import { getConfig, loadConfig } from './config';
+import { encodeMsg, decodeMsg, generateTestMsg, verifyTestMsg, log, sleep, monitorClientAndLog } from './helpers';
 
 // -----------------------------------------------------------------------------
 
@@ -10,7 +11,7 @@ const runTests = async () => {
 	loadConfig();
 
 	// Connect to the test server
-	log('Connecting...');
+	log('Connecting to ' + JSON.stringify(getConfig().servers) + '...');
 	const producer = await Client.create({
 		...getConfig(),
 		name: 'NatsJetstreamClient-basic-test-producer'
@@ -31,7 +32,7 @@ const runTests = async () => {
 
 	// Set up subscriptions
 	log('Subscribing consumers...');
-	consumer.subscribe('TEST_CHANNEL.*', async (msg: Message) => {
+	await consumer.subscribe('TEST_CHANNEL.*', async (msg: Message) => {
 		const s = decodeMsg(msg.message);
 		log('[TEST_CHANNEL.*] Received: ' + s);
 
@@ -49,7 +50,7 @@ const runTests = async () => {
 		receivedAll += 1;
 	});
 
-	consumer.subscribe('TEST_CHANNEL.ODD', async (msg: Message) => {
+	await consumer.subscribe('TEST_CHANNEL.ODD', async (msg: Message) => {
 		const s = decodeMsg(msg.message);
 		log('[TEST_CHANNEL.ODD] Received: ' + s);
 
@@ -67,7 +68,7 @@ const runTests = async () => {
 		receivedOdd += 1;
 	});
 
-	consumer.subscribe('TEST_CHANNEL.EVEN', async (msg: Message) => {
+	await consumer.subscribe('TEST_CHANNEL.EVEN', async (msg: Message) => {
 		const s = decodeMsg(msg.message);
 		log('[TEST_CHANNEL.EVEN] Received: ' + s);
 

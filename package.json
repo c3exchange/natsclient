@@ -1,6 +1,6 @@
 {
 	"name": "@c3exchange/natsjetstreamclient",
-	"version": "0.1.2",
+	"version": "0.2.0",
 	"description": "A NATS.io/JetStream client library",
 	"main": "lib/index.js",
 	"types": "lib/index.d.ts",

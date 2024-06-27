@@ -8,8 +8,15 @@ export class SharedInternals {
 	private closed = false;
 	private nextId = 0;
 
+	constructor(private conn: nats.NatsConnection) {
+	}
+
 	public isClosed(): boolean {
 		return this.closed;
+	}
+
+	public async flush(): Promise<void> {
+		await this.conn.flush();
 	}
 
 	public async close(): Promise<void> {

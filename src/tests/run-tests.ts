@@ -4,9 +4,9 @@ import path from 'path';
 
 // -----------------------------------------------------------------------------
 
-const runChild = (filename: string): Promise<number> => {
+const runChild = (filename: string, args: string[]): Promise<number> => {
 	return new Promise((resolve) => {
-		const child = spawn('node', [ '--enable-source-maps', filename ]);
+		const child = spawn('node', [ '--enable-source-maps', filename ].concat(args));
 
 		child.stdout.on('data', (data) => {
 			process.stdout.write(data);
@@ -23,14 +23,14 @@ const runChild = (filename: string): Promise<number> => {
 const runTests = async (): Promise<boolean> => {
 	let result = true;
 
+	const args = process.argv.slice(2);
 	const files = await glob('*.test.js', {
 		cwd: __dirname,
 		nodir: true
 	});
 	for (const file of files) {
 		const filename = path.join(__dirname, file);
-		console.log(filename);
-		const code = await runChild(filename);
+		const code = await runChild(filename, args);
 		if (code != 0) {
 			result = false;
 		}

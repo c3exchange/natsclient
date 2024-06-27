@@ -18,10 +18,10 @@ export interface ClientOptions {
 	credentials: ClientCredentials;
 	/**
 	 * Configure if a secure channel must be used.
-	 * @type {ClientTlsConfig | 'enforce' | 'never' | 'auto' | undefined}
+	 * @type {ClientTlsConfig | undefined}
 	 * @default 'auto'
 	 */
-	tls?: ClientTlsConfig | "enforce" | "never" | "auto";
+	tls?: ClientTlsConfig;
 	/**
 	 * Custom name to identify this client.
 	 * @type {string}
@@ -90,10 +90,15 @@ export interface ClientCredentialsToken {
 	token: string;
 }
 /**
- * TLS configuration options used while connecting to a server.
- * @interface ClientTlsConfig
+ * TLS configuration to use.
+ * @type ClientTlsConfig
  */
-export interface ClientTlsConfig {
+export type ClientTlsConfig = ClientTlsOptions | "always" | "never" | "auto";
+/**
+ * TLS configuration options used while connecting to a server.
+ * @interface ClientTlsOptions
+ */
+export interface ClientTlsOptions {
 	/**
 	 * Forces to use TLS.
 	 * @type {boolean | undefined}
@@ -129,6 +134,15 @@ export interface ClientTlsConfig {
 	 * @type {string | undefined}
 	 */
 	key?: string;
+}
+/**
+ * Define an interface for the events and their corresponding listener arguments
+ * @interface ClientEventsMap
+ */
+export interface ClientEventsMap {
+	"status": [
+		connection: "connected" | "disconnected"
+	];
 }
 /**
  * Contents of an ephemeral message.
@@ -621,7 +635,7 @@ export interface KvDeleteOptions {
  * Implements a connector to a NATS.io JetStream instance.
  * @class Client
  */
-export declare class Client extends EventEmitter {
+export declare class Client extends EventEmitter<ClientEventsMap> {
 	private _name;
 	private conn;
 	private jsm;
@@ -663,17 +677,19 @@ export declare class Client extends EventEmitter {
 	/**
 	 * Creates a subscription for ephemeral messages based on the given subject.
 	 * @method subscribe
+	 * @async
 	 * @param {string} subject - The topic to subscribe.
 	 * @param {MessageCallback} cb - Asynchronous callback to call when a new message arrives.
 	 */
-	subscribe(subject: string, cb: MessageCallback): void;
+	subscribe(subject: string, cb: MessageCallback): Promise<void>;
 	/**
 	 * Destroys an active subscription for ephemeral messages on the given subject.
 	 * It does not throw errors if the connection is closed or the subscription does not exists.
+	 * @async
 	 * @method unsubscribe
 	 * @param {string} subject - The topic to unsubscribe.
 	 */
-	unsubscribe(subject: string): void;
+	unsubscribe(subject: string): Promise<void>;
 	/**
 	 * Gets an existing JetStream stream.
 	 * @async

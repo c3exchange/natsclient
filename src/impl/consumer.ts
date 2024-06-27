@@ -114,6 +114,9 @@ export class ConsumerImpl implements Consumer {
 		}).finally(() => {
 			this.unsubscribe();
 		});
+
+		// Ensure the subscription message is sent before retuning
+		await this.internals.flush();
 	}
 
 	/**
@@ -127,6 +130,9 @@ export class ConsumerImpl implements Consumer {
 				// Unsubscribe
 				try {
 					await consumerMessages.close();
+
+					// Ensure the subscription message is sent before retuning
+					await this.internals.flush();
 				}
 				catch (_err: any) {
 					// Ingore errors
