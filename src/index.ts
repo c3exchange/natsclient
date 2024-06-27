@@ -569,7 +569,6 @@ export class Client extends EventEmitter<ClientEventsMap> {
 			codec: NoopKvCodecs(),
 			allow_direct: false,
 			max_bytes: (opts && opts.maxStorageSizeInBytes) ? opts.maxStorageSizeInBytes : 1024 * 1024,
-			maxBucketSize: (opts && opts.maxStorageSizeInBytes) ? opts.maxStorageSizeInBytes : 1024 * 1024,
 			...(opts && {
 				...(opts.description && opts.description.length > 0 && {
 					description: opts.description
