@@ -1,0 +1,74 @@
+name: Publish
+run-name: Publish ${{ github.ref }}
+
+on:
+  push:
+    tags:
+      - v**
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: publish
+    permissions: read-all
+    steps:
+      - name: Setting up variables and references
+        id: init
+        shell: bash
+        run: |
+          # extract version from tag
+          if ! [[ "${{ github.ref }}" =~ ^refs/tags/v* ]]; then
+            echo "Error: Tag must start with the letter 'v' followed by a semantic version."
+            exit 1
+          fi
+          TAG="${{ github.ref }}"
+          TAG="${TAG:11}"
+          if ! [[ $TAG =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$ ]]; then
+            echo "Error: Tag must be specified in the semantic version format."
+            exit 1
+          fi
+          #
+          # get reference to use
+          REF_NAME="${{ github.sha }}"
+          #
+          # step output
+          echo "TAG=$TAG"               >> $GITHUB_OUTPUT
+          echo "REF_NAME=$REF_NAME"     >> $GITHUB_OUTPUT
+          echo "NODEJS_VERSION=20.11.0" >> $GITHUB_OUTPUT
+
+      - name: Checking out source code
+        uses: actions/checkout@v4
+        with:
+          repository: c3exchange/serverlesshub
+          ref: ${{ steps.init.outputs.REF_NAME }}
+          persist-credentials: false
+
+      - name: Validate version tag
+        shell: bash
+        run: |
+          LIB_VERSION=$(jq -r .version package.json)
+          if ![[ "v$LIB_VERSION" == "$TAG" ]]; then
+            echo "Error: Package.json contains a different version tag."
+            exit 1
+          fi
+
+      - name: Setting up Node.js environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.init.outputs.NODEJS_VERSION }}
+
+      - name: Installing dependencies
+        shell: bash
+        run: |
+          export NODE_OPTIONS="--max-old-space-size=4096"
+          export NODE_ENV=production
+          npm install --include=dev
+
+      - name: Build and publish library
+        shell: bash
+        run: |
+          export NODE_OPTIONS="--max-old-space-size=4096"
+          export NODE_ENV=production
+          export NODE_AUTH_TOKEN=${{ secrets.NPM_TOKEN }}
+          npm publish --provenance --access=public
