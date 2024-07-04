@@ -112,7 +112,7 @@ export class Client extends EventEmitter<ClientEventsMap> {
 		}
 
 		// Build TLS options
-		let tls: nats.TlsOptions | undefined;
+		let tls: nats.TlsOptions | null | undefined;
 		if (opts.tls !== 'never') {
 			if (opts.tls && opts.tls !== 'auto') {
 				if (opts.tls === 'always') {
@@ -135,9 +135,9 @@ export class Client extends EventEmitter<ClientEventsMap> {
 					throw new Error('NatsJetstreamClient: invalid TLS settings');
 				}
 			}
-			else {
-				tls = {}
-			}
+		}
+		else {
+			tls = null;
 		}
 
 		// Connect to server

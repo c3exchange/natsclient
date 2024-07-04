@@ -46,11 +46,6 @@ export const loadConfig = (): void => {
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	assert(process.env['NATS_TEST_HOST']!.length > 0, 'NATS_TEST_HOST not found or empty');
 
-	let useTls = false;
-	if (process.env['NATS_TEST_HOST'].startsWith('tls://')) {
-		useTls = true;
-	}
-
 	if (typeof process.env['NATS_TEST_JWT'] === 'string' && process.env['NATS_TEST_JWT'].length > 0) {
 		assert(typeof process.env['NATS_TEST_JWT'] === 'string', 'NATS_TEST_JWT not found or empty');
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -104,7 +99,6 @@ export const loadConfig = (): void => {
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		servers: process.env['NATS_TEST_HOST']!.split(',').map((elem) => elem.trim()),
 		credentials,
-		tls: useTls ? {} : 'never',
 		debug: values.debug || false
 	};
 };

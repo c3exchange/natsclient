@@ -5,7 +5,7 @@
 			"type": "node-terminal",
 			"name": "Run tests",
 			"request": "launch",
-			"command": "npm run test -- --env tests_c3_dev.env",
+			"command": "npm run test",
 			"cwd": "${workspaceFolder}",
 			"sourceMaps": true
 		}
