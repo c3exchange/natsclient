@@ -72,4 +72,4 @@ jobs:
           NODE_ENV: production
         run: |
           npm config -L project set '//registry.npmjs.org/:_authToken=${{secrets.NPM_TOKEN}}' > /dev/null 2>&1
-          npm publish --provenance --access=public
+          npm publish --access=public
