@@ -59,15 +59,17 @@ jobs:
 
       - name: Installing dependencies
         shell: bash
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+          NODE_ENV: production
         run: |
-          export NODE_OPTIONS="--max-old-space-size=4096"
-          export NODE_ENV=production
           npm install --include=dev
 
       - name: Build and publish library
         shell: bash
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+          NODE_ENV: production
         run: |
-          export NODE_OPTIONS="--max-old-space-size=4096"
-          export NODE_ENV=production
-          export NODE_AUTH_TOKEN=${{ secrets.NPM_TOKEN }}
+          npm config -L project set '//registry.npmjs.org/:_authToken=${{secrets.NPM_TOKEN}}' > /dev/null 2>&1
           npm publish --provenance --access=public
